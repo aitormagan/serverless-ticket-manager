@@ -57,14 +57,14 @@ $(window).load(function() {
 
     var updateUsersTable = function updateUsersTable() {
         callAPI("userGet", null, null, function(res) {
-            var tableBody = $("#abonados > tbody");
+            var tableBody = $("#abonados-table > tbody");
             tableBody.empty();
 
             currentUsers = {};
             res.data.forEach(function(element) {
                 currentUsers[element.id] = element;
                 var date = new Date(element.date);
-                var strDate = date.toLocaleDateString() + " " + date.toLocaleTimeString();
+                var strDate = date.toLocaleDateString("es-es") + " " + date.toLocaleTimeString();
                 var editIcon = getActionIcon("pencil", element.id);
                 var deleteIcon = getActionIcon("remove", element.id);
                 tableBody.append("<tr> <th scope=\"row\">" + element.id + "</th> <td>" + element.username + "</td> <td>" + strDate + "</td> <td>" + editIcon + deleteIcon + "</td> </tr>");

@@ -32,21 +32,21 @@ $(window).load(function() {
     var createUser = function createUser(username) {
         callAPI("userPost", {}, {username: username}, function(result) {
             showAlert("<strong>" + result.data.username + "</strong> creado con # <strong>" + result.data.id + "</strong>")
-            updateTable();
+            updateUsersTable();
         });
     }
 
     var editUser = function editUser(id, username) {
         callAPI("userIdPatch", {id: id}, {username: username}, function(result) {
             showAlert("<strong>#" + result.data.id + " " + result.data.username + "</strong> ha sido editado correctamente</strong>")
-            updateTable();
+            updateUsersTable();
         });
     };
 
     var deleteUser = function deleteUser(id) {
         callAPI("userIdDelete", {id: id}, {}, function(result) {
             showAlert("<strong>#" + id + " " + currentUsers[id].username + "</strong> ha sido borrado correctamente</strong>")
-            updateTable();
+            updateUsersTable();
         });
     };
 
@@ -55,7 +55,7 @@ $(window).load(function() {
         $("#username-input").val(username)
     }
 
-    var updateTable = function updateTable() {
+    var updateUsersTable = function updateUsersTable() {
         callAPI("userGet", null, null, function(res) {
             var tableBody = $("#abonados > tbody");
             tableBody.empty();
@@ -93,6 +93,8 @@ $(window).load(function() {
         $("#abonado-modal").modal("show");
     });
 
+    $("#update-abonos-list").click(updateUsersTable);
+
     $("#edit-form-accept-button").click(function() {
         var id = $("#userid-input").val();
         var username = $("#username-input").val();
@@ -104,5 +106,5 @@ $(window).load(function() {
         }
     });
 
-    updateTable();
+    updateUsersTable();
 });

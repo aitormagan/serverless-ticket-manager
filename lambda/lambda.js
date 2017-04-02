@@ -284,6 +284,8 @@ var deleteItem = function deleteItem(tableName, event, callback) {
     });
 };
 
+// MAIN CONTROLLER
+
 exports.handler = (event, context, callback) => {
     console.log('Received event:', JSON.stringify(event, null, 2));
 

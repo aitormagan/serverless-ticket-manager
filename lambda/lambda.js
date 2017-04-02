@@ -5,6 +5,10 @@ console.log('Loading function');
 var AWS = require('aws-sdk');
 var docClient = new AWS.DynamoDB.DocumentClient();
 
+const USERS_TABLE = "RegisteredUsers";
+const DONATIONS_TABLE = "RegisteredDonations";
+const PROPERTIES_TABLE = "Properties";
+
 var generateResponse = function generateResponse(callback, statusCode, body, headers) {
     var finalHeaders = headers || {};
     finalHeaders['Access-Control-Allow-Origin'] = "*";
@@ -23,19 +27,14 @@ var notImplemented = function notImplemented(event, callback) {
     generateResponse(callback, 501, {"message": "The required method is not already implemented"});
 };
 
-var createItem = function createItem(event, callback) {
+// CREATE ITEMS
 
-    var parsedJson = JSON.parse(event.body);
-
-    if (parsedJson === null || !("username" in parsedJson)) {
-        generateErrorResponse(callback, 400, "'username' is missing");
-        return;
-    }
+var createItem = function createItem(nextItemIdKey, tablenName, item, event, callback) {
 
     var params = {
-        "TableName": "Properties",
+        "TableName": PROPERTIES_TABLE,
         "Key": {
-            "key": "nextUserId"
+            "key": nextItemIdKey
         }
     };
 
@@ -46,14 +45,12 @@ var createItem = function createItem(event, callback) {
             generateErrorResponse(callback, 500, "Invalid Response from the backend");
         } else {
             var itemId = data.Item.val;
+            var itemCopy = JSON.parse(JSON.stringify(item));
+            itemCopy.id = itemId;
 
             var paramsInsertUser = {
-                "TableName": "RegisteredUsers",
-                "Item": {
-                    "id": itemId,
-                    "date": Date.now(),
-                    "username": parsedJson.username
-                }
+                "TableName": tablenName,
+                "Item": itemCopy
             };
 
             docClient.put(paramsInsertUser, function(err, data) {
@@ -62,9 +59,9 @@ var createItem = function createItem(event, callback) {
                     generateErrorResponse(callback, 500, "Invalid Response from the backend");
                 } else {
                     var paramsUpdateNextItemId = {
-                        "TableName": "Properties",
+                        "TableName": PROPERTIES_TABLE,
                         "Key": {
-                            "key": "nextUserId"
+                            "key": nextItemIdKey
                         },
                         "UpdateExpression": "set val = val + :val",
                         "ExpressionAttributeValues": {
@@ -89,9 +86,54 @@ var createItem = function createItem(event, callback) {
     });
 };
 
-var getAllItems = function getAllItems(event, callback) {
+
+var createUser = function(event, callback) {
+
+    var parsedJson = JSON.parse(event.body);
+
+    if (parsedJson === null || !("username" in parsedJson)) {
+        generateErrorResponse(callback, 400, "'username' is missing");
+        return;
+    }
+
+    var item = {
+        "date": Date.now(),
+        "username": parsedJson.username
+    };
+
+    createItem("nextUserId", USERS_TABLE, item, event, callback);
+
+};
+
+var createDonation = function(event, callback) {
+    var parsedJson = JSON.parse(event.body);
+
+    if (parsedJson === null || !("username" in parsedJson) || !("amount" in parsedJson)) {
+        generateErrorResponse(callback, 400, "'username' and/or 'amount' are missing");
+        return;
+    }
+
+    var amount = parseFloat(parsedJson.amount);
+
+    if (isNaN(amount)) {
+        generateErrorResponse(callback, 400, "'amount' is not a valid float");
+        return;
+    }
+
+    var item = {
+        "date": Date.now(),
+        "username": parsedJson.username,
+        "amount": amount
+    };
+
+    createItem("nextDonationId", DONATIONS_TABLE, item, event, callback);
+};
+
+// GET ITEMS
+
+var getAllItems = function getAllItems(tableName, event, callback) {
     var paramsScan = {
-        "TableName": "RegisteredUsers",
+        "TableName": tableName,
     };
 
     docClient.scan(paramsScan, function(err, data) {
@@ -104,7 +146,9 @@ var getAllItems = function getAllItems(event, callback) {
     });
 };
 
-var getItem = function getItem(event, callback) {
+// GET SINGLE ITEM
+
+var getItem = function getItem(tableName, event, callback) {
 
     var id = parseInt(event.pathParameters.id);
 
@@ -115,7 +159,7 @@ var getItem = function getItem(event, callback) {
     }
 
     var params = {
-        "TableName": "RegisteredUsers",
+        "TableName": tableName,
         "Key": {
             "id": id
         }
@@ -135,7 +179,9 @@ var getItem = function getItem(event, callback) {
     });
 };
 
-var updateItem = function updateItem(event, callback) {
+// UPDATE ITEM
+
+var updateItem = function updateItem(tableName, updateExpression, updateAttributeValues, event, callback) {
 
     var id = parseInt(event.pathParameters.id);
 
@@ -145,23 +191,14 @@ var updateItem = function updateItem(event, callback) {
         return;
     }
 
-    var parsedJson = JSON.parse(event.body);
-
-    if (parsedJson === null || !("username" in parsedJson)) {
-        generateErrorResponse(callback, 400, "'username' is missing");
-        return;
-    }
-
     var params = {
-        "TableName": "RegisteredUsers",
+        "TableName": tableName,
         "Key": {
             "id": id
         },
-        "UpdateExpression": "set username = :username",
+        "UpdateExpression": updateExpression,
         "ConditionExpression": "attribute_exists(id)",
-        "ExpressionAttributeValues": {
-            ":username": parsedJson.username
-        },
+        "ExpressionAttributeValues": updateAttributeValues,
         "ReturnValues": "ALL_NEW"
     };
 
@@ -182,7 +219,40 @@ var updateItem = function updateItem(event, callback) {
 
 };
 
-var deleteItem = function deleteItem(event, callback) {
+var updateUser = function updateUser(event, callback) {
+
+    var parsedJson = JSON.parse(event.body);
+
+    if (parsedJson === null || !("username" in parsedJson)) {
+        generateErrorResponse(callback, 400, "'username' is missing");
+        return;
+    }
+
+    updateItem(USERS_TABLE, "set username = :username", {":username": parsedJson.username}, event, callback);
+};
+
+var updateDonation = function updateDonation(event, callback) {
+
+    var parsedJson = JSON.parse(event.body);
+
+    if (parsedJson === null || !("username" in parsedJson) || !("amount" in parsedJson)) {
+        generateErrorResponse(callback, 400, "'username' and/or 'amount' are missing");
+        return;
+    }
+
+    var amount = parseFloat(parsedJson.amount);
+
+    if (isNaN(amount)) {
+        generateErrorResponse(callback, 400, "'amount' is not a valid float");
+        return;
+    }
+
+    updateItem(DONATIONS_TABLE, "set username = :username, amount = :amount", {":username": parsedJson.username, ":amount": amount}, event, callback);
+};
+
+// DELETE ITEM
+
+var deleteItem = function deleteItem(tableName, event, callback) {
 
     var id = parseInt(event.pathParameters.id);
 
@@ -193,7 +263,7 @@ var deleteItem = function deleteItem(event, callback) {
     }
 
     var params = {
-        "TableName": "RegisteredUsers",
+        "TableName": tableName,
         "Key": {
             "id": id
         },
@@ -219,13 +289,22 @@ exports.handler = (event, context, callback) => {
 
     var handlers = {
         "/user": {
-            "POST": createItem,
-            "GET": getAllItems
+            "POST": createUser,
+            "GET": getAllItems.bind(this, USERS_TABLE)
         },
         "/user/{id}": {
-            "GET": getItem,
-            "DELETE": deleteItem,
-            "PATCH": updateItem
+            "GET": getItem.bind(this, USERS_TABLE),
+            "DELETE": deleteItem.bind(this, USERS_TABLE),
+            "PATCH": updateUser
+        },
+        "/donation": {
+            "POST": createDonation,
+            "GET": getAllItems.bind(this, DONATIONS_TABLE)
+        },
+        "/donation/{id}": {
+            "GET": getItem.bind(this, DONATIONS_TABLE),
+            "DELETE": deleteItem.bind(this, DONATIONS_TABLE),
+            "PATCH": updateDonation
         }
     };
 

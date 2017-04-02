@@ -13,5 +13,5 @@ A sample Ticket Manager built using the Serverless capabilities offered by AWS (
 
 Items: {key: "nextUserId", "val": 1}
 
-### Table RegisteredUsers: 
+### Table "RegisteredUsers": 
 * Hashkey: id - Number

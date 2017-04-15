@@ -73,7 +73,7 @@ var getTTL = function getTTL() {
     ttl.setMinutes(0);
     ttl.setSeconds(0);
     return Math.round(ttl.getTime() / 1000) + (3600 * 24);
-}
+};
 
 var handleCallback = function handleCallback(event, callback) {
     if (!('code' in event.queryStringParameters)) {

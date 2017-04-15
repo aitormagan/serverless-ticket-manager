@@ -9,6 +9,14 @@ const USERS_TABLE = "RegisteredUsers";
 const DONATIONS_TABLE = "RegisteredDonations";
 const PROPERTIES_TABLE = "Properties";
 
+const INVALID_BACKEND_RESPONSE_ERROR = "INVALID_BACKEND_RESPONSE";
+const MISSING_USER_NAME_ERROR = "MISSING_USER_NAME";
+const MISSING_USER_NAME_OR_AMOUNT_ERROR = "MISSING_USER_NAME_OR_AMOUNT";
+const INVALID_AMOUNT_ERROR = "INVALID_AMOUNT";
+const INVALID_ID_FORMAT_ERROR = "INVALID_ID_FORMAT";
+const NON_EXISTING_ID_ERROR = "NON_EXISTING_ID";
+
+
 var generateResponse = function generateResponse(callback, statusCode, body, headers) {
     var finalHeaders = headers || {};
     finalHeaders['Access-Control-Allow-Origin'] = "*";
@@ -19,8 +27,8 @@ var generateResponse = function generateResponse(callback, statusCode, body, hea
     });
 };
 
-var generateErrorResponse = function generateErrorResponse(callback, statusCode, errorMessage, headers) {
-    generateResponse(callback, statusCode, {"message": errorMessage}, headers);
+var generateErrorResponse = function generateErrorResponse(callback, statusCode, errorMessage, errorCode, headers) {
+    generateResponse(callback, statusCode, {"message": errorMessage, "code": errorCode}, headers);
 };
 
 var notImplemented = function notImplemented(event, callback) {
@@ -42,7 +50,7 @@ var createItem = function createItem(nextItemIdKey, tablenName, item, event, cal
 
         if (err) {
             console.log("[ERROR][CREATE ITEM] Get Current ItemId:", JSON.stringify(err));
-            generateErrorResponse(callback, 500, "Invalid Response from the backend");
+            generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
         } else {
             var itemId = data.Item.val;
             var itemCopy = JSON.parse(JSON.stringify(item));
@@ -56,7 +64,7 @@ var createItem = function createItem(nextItemIdKey, tablenName, item, event, cal
             docClient.put(paramsInsertUser, function(err, data) {
                 if (err) {
                     console.log("[ERROR][CREATE ITEM] Insert User:", JSON.stringify(err));
-                    generateErrorResponse(callback, 500, "Invalid Response from the backend");
+                    generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
                 } else {
                     var paramsUpdateNextItemId = {
                         "TableName": PROPERTIES_TABLE,
@@ -73,7 +81,7 @@ var createItem = function createItem(nextItemIdKey, tablenName, item, event, cal
                     docClient.update(paramsUpdateNextItemId, function(err, data) {
                         if (err) {
                             console.log("[ERROR][CREATE ITEM] Update Next Item ID:", JSON.stringify(err));
-                            generateErrorResponse(callback, 500, "Invalid Response from the backend");
+                            generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
                         } else {
                             console.log("[INFO][CREATE ITEM] New Item Inserted: ", JSON.stringify(paramsInsertUser.Item));
                             generateResponse(callback, 201, paramsInsertUser.Item, {"Location": event.path + "/" + itemId});
@@ -91,8 +99,8 @@ var createUser = function(event, callback) {
 
     var parsedJson = JSON.parse(event.body);
 
-    if (parsedJson === null || !("username" in parsedJson)) {
-        generateErrorResponse(callback, 400, "'username' is missing");
+    if (parsedJson === null || !("username" in parsedJson) || parsedJson["username"] === "") {
+        generateErrorResponse(callback, 400, "'username' is missing", MISSING_USER_NAME_ERROR);
         return;
     }
 
@@ -108,15 +116,15 @@ var createUser = function(event, callback) {
 var createDonation = function(event, callback) {
     var parsedJson = JSON.parse(event.body);
 
-    if (parsedJson === null || !("username" in parsedJson) || !("amount" in parsedJson)) {
-        generateErrorResponse(callback, 400, "'username' and/or 'amount' are missing");
+    if (parsedJson === null || !("username" in parsedJson) || !("amount" in parsedJson) || parsedJson["username"] === "" || parsedJson["amount"] === "") {
+        generateErrorResponse(callback, 400, "'username' and/or 'amount' are missing", MISSING_USER_NAME_OR_AMOUNT_ERROR);
         return;
     }
 
-    var amount = parseFloat(parsedJson.amount);
+    var amount = parseFloat(parsedJson.amount.replace(",", "."));
 
     if (isNaN(amount)) {
-        generateErrorResponse(callback, 400, "'amount' is not a valid float");
+        generateErrorResponse(callback, 400, "'amount' is not a valid float", INVALID_AMOUNT_ERROR);
         return;
     }
 
@@ -139,7 +147,7 @@ var getAllItems = function getAllItems(tableName, event, callback) {
     docClient.scan(paramsScan, function(err, data) {
         if (err) {
             console.log("[ERROR][GET ALL ITEMS] Get All Items:", JSON.stringify(err));
-            generateErrorResponse(callback, 500, "Invalid Response from the backend");
+            generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
         } else {
             generateResponse(callback, 200, data.Items.sort((a,b) => a.id - b.id));
         }
@@ -154,7 +162,7 @@ var getItem = function getItem(tableName, event, callback) {
 
     if (isNaN(id)) {
         console.log("[WARN][GET ITEM] Invalid ID: ", id);
-        generateErrorResponse(callback, 400, "The ID '" + event.pathParameters.id + "' is not valid");
+        generateErrorResponse(callback, 400, "The ID '" + event.pathParameters.id + "' is not valid", INVALID_ID_FORMAT_ERROR);
         return;
     }
 
@@ -168,13 +176,13 @@ var getItem = function getItem(tableName, event, callback) {
     docClient.get(params, function(err, data) {
         if (err) {
             console.log("[ERROR][GET ITEM] Get Item:", JSON.stringify(err));
-            generateErrorResponse(callback, 500, "Invalid Response from the backend");
+            generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
         } else if (data.Item) {
             console.log("[INFO][GET ITEM] Returned Item: ", JSON.stringify(data.Item));
             generateResponse(callback, 200, data.Item);
         } else {
             console.log("[WARN][GET ITEM] Non exieting item: ", id);
-            generateErrorResponse(callback, 404, "The ID '" + id + "' does not exist");
+            generateErrorResponse(callback, 404, "The ID '" + id + "' does not exist", NON_EXISTING_ID_ERROR);
         }
     });
 };
@@ -187,7 +195,7 @@ var updateItem = function updateItem(tableName, updateExpression, updateAttribut
 
     if (isNaN(id)) {
         console.log("[WARN][DELETE ITEM] Invalid ID: ", id);
-        generateErrorResponse(callback, 400, "The ID '" + event.pathParameters.id + "' is not valid");
+        generateErrorResponse(callback, 400, "The ID '" + event.pathParameters.id + "' is not valid", INVALID_ID_FORMAT_ERROR);
         return;
     }
 
@@ -206,10 +214,10 @@ var updateItem = function updateItem(tableName, updateExpression, updateAttribut
         if (err) {
             if (err.code === "ConditionalCheckFailedException") {
                 console.log("[WARN][UPDATE ITEM] Non existing item:", id);
-                generateErrorResponse(callback, 404, "The ID '" + id + "' does not exist");
+                generateErrorResponse(callback, 404, "The ID '" + id + "' does not exist", NON_EXISTING_ID_ERROR);
             } else {
                 console.log("[ERROR][UPDATE ITEM] Update Item:", JSON.stringify(err));
-                generateErrorResponse(callback, 500, "Invalid Response from the backend");
+                generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
             }
         } else {
             console.log("[INFO][UPDATE ITEM] Updated Item: ", JSON.stringify(data.Attributes));
@@ -224,7 +232,7 @@ var updateUser = function updateUser(event, callback) {
     var parsedJson = JSON.parse(event.body);
 
     if (parsedJson === null || !("username" in parsedJson)) {
-        generateErrorResponse(callback, 400, "'username' is missing");
+        generateErrorResponse(callback, 400, "'username' is missing", MISSING_USER_NAME_ERROR);
         return;
     }
 
@@ -236,14 +244,14 @@ var updateDonation = function updateDonation(event, callback) {
     var parsedJson = JSON.parse(event.body);
 
     if (parsedJson === null || !("username" in parsedJson) || !("amount" in parsedJson)) {
-        generateErrorResponse(callback, 400, "'username' and/or 'amount' are missing");
+        generateErrorResponse(callback, 400, "'username' and/or 'amount' are missing", MISSING_USER_NAME_OR_AMOUNT_ERROR);
         return;
     }
 
     var amount = parseFloat(parsedJson.amount);
 
     if (isNaN(amount)) {
-        generateErrorResponse(callback, 400, "'amount' is not a valid float");
+        generateErrorResponse(callback, 400, "'amount' is not a valid float", INVALID_AMOUNT_ERROR);
         return;
     }
 
@@ -258,7 +266,7 @@ var deleteItem = function deleteItem(tableName, event, callback) {
 
     if (isNaN(id)) {
         console.log("[WARN][DELETE ITEM] Invalid ID: ", id);
-        generateErrorResponse(callback, 400, "The ID '" + event.pathParameters.id + "' is not valid");
+        generateErrorResponse(callback, 400, "The ID '" + event.pathParameters.id + "' is not valid", INVALID_ID_FORMAT_ERROR);
         return;
     }
 
@@ -273,13 +281,13 @@ var deleteItem = function deleteItem(tableName, event, callback) {
     docClient.delete(params, function(err, data) {
         if (err) {
             console.log("[ERROR][DELETE ITEM] Delete Item:", JSON.stringify(err));
-            generateErrorResponse(callback, 500, "Invalid Response from the backend");
+            generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
         } else if (Object.keys(data).length > 0) {
             console.log("[INFO][DELETE ITEM] Deleted Item: ", id);
             generateResponse(callback, 204);
         } else {
             console.log("[WARN][DELETE ITEM] Non existing item: ", id);
-            generateErrorResponse(callback, 404, "The ID '" + id + "' does not exist");
+            generateErrorResponse(callback, 404, "The ID '" + id + "' does not exist", NON_EXISTING_ID_ERROR);
         }
     });
 };

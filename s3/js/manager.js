@@ -5,6 +5,21 @@ $(window).load(function() {
     var currentDonations = {};
     const USER_TICKET_COST = 33;
 
+    const ERROR_TRANSLATIONS = {
+        "INVALID_OAUTH2_RESPONSE": "Respuesta Inválida del proveedor OAuth2. Reintentalo de nuevo más tarde.",
+        "PERMISSION_DENIED": "No se ha autorizado a la aplicación a acceder a tu información en el proveedor OAuth2. Vuelve a intentarlo y pulsa el botón \"Permitir\".",
+        "INVALID_BACKEND_RESPONSE": "Error al acceder al servicio. Inténtalo de nuevo pasados unos segundos.",
+        "NOT_AUTHORIZED_EMAIL": "Tu dirección de correo electrónico no tiene acceso a este servicio.", 
+        "AHTORIZATION_NOT_INCLUDED": "La cabecera \"Authorization\" no está incluída.",
+        "INVALID_AUTHORIZATION": "El token de autorización incluído en la petición no es válido.",
+        "MISSING_USER_NAME": "No se ha incluído el nombre en la petición. Vuelve a realizar la operación incluyendo el nombre.",
+        "MISSING_USER_NAME_OR_AMOUNT": "No se ha incluído el nombre o la cantidad donada en la petición. Vuelve a realizar la operación incluyendo el nombre y la cantidad donada.",
+        "INVALID_AMOUNT": "El valor de la cantidad donada sólo puede ser un número. Vuelve a realizar la operación especificando un número válido",
+        "INVALID_ID_FORMAT": "El formato del ID de recurso es inválido.",
+        "NON_EXISTING_ID": "El ID de recurso indicado no existe."
+
+    }
+
     var getActionIcon = function getActionIcon(action, id) {
         return "<span class=\"glyphicon glyphicon-" + action + "\" style=\"cursor: pointer; color: #777777;\" data-id=" + id + "></span>"
     };
@@ -24,6 +39,18 @@ $(window).load(function() {
         );
     };
 
+    var showError = function showError(errorCode) {
+        var errorText = errorCode in ERROR_TRANSLATIONS ? ERROR_TRANSLATIONS[errorCode] : errorCode;
+
+        if (["INVALID_OAUTH2_RESPONSE", "PERMISSION_DENIED", "NOT_AUTHORIZED_EMAIL", "INVALID_AUTHORIZATION"].indexOf(errorCode) >= 0) {
+            errorText += " <a href=\"/\">Actualizar</a>";
+            $('#abonos').addClass('hidden');
+            $('#donaciones').addClass('hidden')
+        }
+
+        showAlert(errorText, "danger");
+    }
+
     var callAPI = function callAPI(apiAction, params, body, then) {
         var additionalParams = { headers: { Authorization: Cookies.get("token") } };
         $("#loading-alert").removeClass("hidden");
@@ -36,7 +63,7 @@ $(window).load(function() {
                 return;
             }
             $("#loading-alert").addClass("hidden");
-            showAlert("Error al acceder al servicio. Inténtalo de nuevo pasados unos segundos.", "danger");
+            showError(result.data.code);
         });
     };
 
@@ -208,9 +235,10 @@ $(window).load(function() {
 
     var newToken = $.urlParam("token");
     var error = $.urlParam("error");
+    window.history.pushState("", "", '/');
 
     if (error) {
-        showAlert(error, "danger");
+        showError(error);
     } else {
 
         if (newToken) {

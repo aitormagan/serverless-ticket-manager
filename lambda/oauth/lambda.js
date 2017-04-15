@@ -11,6 +11,13 @@ const S3_WEBSITE_URL = "http://BUCKET_ID.s3-website.eu-central-1.amazonaws.com/"
 const PROPERTIES_TABLE = "Properties";
 const USER_TOKENS_TABLE = "UserTokens";
 
+const INVALID_OAUTH2_RESPONSE_ERROR = "INVALID_OAUTH2_RESPONSE";
+const PERMISSION_DENIED_ERROR = "PERMISSION_DENIED";
+const INVALID_BACKEND_RESPONSE_ERROR = "INVALID_BACKEND_RESPONSE";
+const NOT_AUTHORIZED_EMAIL_ERROR = "NOT_AUTHORIZED_EMAIL";
+const AUTHORIZATION_NOT_INCLUDED_ERROR = "AHTORIZATION_NOT_INCLUDED";
+const INVALID_AUTHORIZATION_ERROR = "INVALID_AUTHORIZATION";
+
 var AWS = require('aws-sdk');
 var docClient = new AWS.DynamoDB.DocumentClient();
 
@@ -62,7 +69,7 @@ var getPOSTContent = function getPOSTContent(event) {
 var handleCallback = function handleCallback(event, callback) {
     if (!('code' in event.queryStringParameters)) {
         console.log("[ERROR][CALLBCK] Code not included");
-        redirectToFront(callback, null, "You must authorize the application to access your Google profile");
+        redirectToFront(callback, null, PERMISSION_DENIED_ERROR);
         return;
     }
 
@@ -71,7 +78,7 @@ var handleCallback = function handleCallback(event, callback) {
         if (err || response.statusCode != 200) {
             var info = err !== null ? err : body_token;
             console.log("[ERROR][CALLBCK] Get Token:", info);
-            redirectToFront(callback, null, "Invalid response from the OAuth server");
+            redirectToFront(callback, null, INVALID_OAUTH2_RESPONSE_ERROR);
             return;
         }
 
@@ -83,7 +90,7 @@ var handleCallback = function handleCallback(event, callback) {
                 if (err || response.statusCode != 200) {
                     var info = err !== null ? err : body_user;
                     console.log("[ERROR][CALLBACK] Get User Info:", info);
-                    redirectToFront(callback, null, "Invalid response from the OAuth server");
+                    redirectToFront(callback, null, INVALID_OAUTH2_RESPONSE_ERROR);
                     return;
                 }
 
@@ -103,7 +110,7 @@ var handleCallback = function handleCallback(event, callback) {
                 docClient.get(paramsGetAuthUsers, function(err, data) {
                     if (err) {
                         console.log("[ERROR][CALLBACK] Get Auth Users:", JSON.stringify(err));
-                        redirectToFront(callback, null, "Invalid response from the backend");
+                        redirectToFront(callback, null, INVALID_BACKEND_RESPONSE_ERROR);
                         return;
                     }
 
@@ -127,7 +134,7 @@ var handleCallback = function handleCallback(event, callback) {
                         docClient.put(paramsInsertUser, function(err, data) {
                             if (err) {
                                 console.log("[ERROR][CALLBACK] Unable to insert user:", JSON.stringify(err));
-                                redirectToFront(callback, null, "Invalid response from the backend");
+                                redirectToFront(callback, null, INVALID_BACKEND_RESPONSE_ERROR);
                                 return;
                             }
 
@@ -136,7 +143,7 @@ var handleCallback = function handleCallback(event, callback) {
 
                     } else {
                         console.log("[ERROR][CALLBACK] User not authorized:", email);
-                        redirectToFront(callback, null, "Your email is not authorized to access this service");
+                        redirectToFront(callback, null, NOT_AUTHORIZED_EMAIL_ERROR);
                         return;
                     }
                 });
@@ -150,7 +157,7 @@ var handleCallback = function handleCallback(event, callback) {
 var currentUser = function currentUser(event, callback) {
 
     if (event.headers === null || !('Authorization' in event.headers)) {
-        generateResponse(callback, 400, {"message": "Authorization not included"});
+        generateResponse(callback, 400, {"message": "Authorization not included", "code": AUTHORIZATION_NOT_INCLUDED_ERROR});
         return;
     }
 
@@ -164,12 +171,12 @@ var currentUser = function currentUser(event, callback) {
     docClient.get(params, function(err, data) {
         if (err) {
             console.log("[ERROR][CHECK LOGGED] Error Accessing DynamoDB:", JSON.stringify(err));
-            generateResponse(callback, 500, {"message": "Invalid response from the backend"});
+            generateResponse(callback, 500, {"message": "Invalid response from the backend", "code": INVALID_BACKEND_RESPONSE_ERROR});
             callback("Error: Invalid Response from the backend");
         } else if (data.Item) {
             generateResponse(callback, 200, data.Item);
         } else {
-            generateResponse(callback, 401, {"message": "Provided token is unknown"});
+            generateResponse(callback, 401, {"message": "Provided token is unknown", "code": INVALID_AUTHORIZATION_ERROR});
         }
     });
 };

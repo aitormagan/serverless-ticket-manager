@@ -66,6 +66,15 @@ var getPOSTContent = function getPOSTContent(event) {
     };
 };
 
+var getTTL = function getTTL() {
+    var ttl = new Date();
+    ttl.setDate(ttl.getDate() + 1);
+    ttl.setHours(6);
+    ttl.setMinutes(0);
+    ttl.setSeconds(0);
+    return Math.round(ttl.getTime() / 1000) + (3600 * 24);
+}
+
 var handleCallback = function handleCallback(event, callback) {
     if (!('code' in event.queryStringParameters)) {
         console.log("[ERROR][CALLBCK] Code not included");
@@ -98,7 +107,7 @@ var handleCallback = function handleCallback(event, callback) {
                 var email = user.email;
                 var name = user.name;
                 var picture = user.picture;
-                var ttl = Math.round(new Date().getTime() / 1000) + (3600 * 24); 
+                var ttl = getTTL(); 
 
                 var paramsGetAuthUsers = {
                     "TableName": PROPERTIES_TABLE,

@@ -39,13 +39,11 @@ $(window).load(function() {
         );
     };
 
-    var showError = function showError(errorCode) {
+    var showError = function showError(errorCode, updateText) {
         var errorText = errorCode in ERROR_TRANSLATIONS ? ERROR_TRANSLATIONS[errorCode] : errorCode;
 
-        if (["INVALID_OAUTH2_RESPONSE", "PERMISSION_DENIED", "NOT_AUTHORIZED_EMAIL", "INVALID_AUTHORIZATION"].indexOf(errorCode) >= 0) {
+        if (updateText) {
             errorText += " <a href=\"/\">Actualizar</a>";
-            $('#abonos').addClass('hidden');
-            $('#donaciones').addClass('hidden')
         }
 
         showAlert(errorText, "danger");
@@ -58,7 +56,7 @@ $(window).load(function() {
             $("#loading-alert").addClass("hidden");
             then(result);
         }).catch(function(result) {
-            if (result.status === 401) {
+            if (result.status === 401 || result.status === 0) {
                 $(location).attr("href", apigClient.url + "/auth/login");
                 return;
             }
@@ -238,7 +236,9 @@ $(window).load(function() {
     window.history.pushState("", "", '/');
 
     if (error) {
-        showError(error);
+        showError(error, true);
+        $('#abonos').addClass('hidden');
+        $('#donaciones').addClass('hidden')
     } else {
 
         if (newToken) {

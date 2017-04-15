@@ -9,6 +9,11 @@ $(window).load(function() {
         return "<span class=\"glyphicon glyphicon-" + action + "\" style=\"cursor: pointer; color: #777777;\" data-id=" + id + "></span>"
     };
 
+    $.urlParam = function(name){
+        var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+        return results === null ? null : decodeURIComponent(results[1]) || 0;
+    }
+
     var showAlert = function showAlert(text, type) {
         type = type || "success";
         $("#messages").empty();
@@ -20,11 +25,16 @@ $(window).load(function() {
     };
 
     var callAPI = function callAPI(apiAction, params, body, then) {
+        var additionalParams = { headers: { Authorization: Cookies.get("token") } };
         $("#loading-alert").removeClass("hidden");
-        apigClient[apiAction](params, body).then(function(result) {
+        apigClient[apiAction](params, body, additionalParams).then(function(result) {
             $("#loading-alert").addClass("hidden");
             then(result);
         }).catch(function(result) {
+            if (result.status === 401) {
+                $(location).attr("href", apigClient.url + "/auth/login");
+                return;
+            }
             $("#loading-alert").addClass("hidden");
             showAlert("Error al acceder al servicio. Inténtalo de nuevo pasados unos segundos.", "danger");
         });
@@ -137,7 +147,7 @@ $(window).load(function() {
                 var strDate = date.toLocaleDateString("es-es") + " " + date.toLocaleTimeString();
                 var editIcon = getActionIcon("pencil", element.id);
                 var deleteIcon = getActionIcon("remove", element.id);
-                tableBody.append("<tr> <th scope=\"row\">" + element.id + "</th> <td>" + element.username + "</td> <td>" + strDate + "</td> <td>" + element.amount +  "</td> <td>" + editIcon + deleteIcon + "</td> </tr>");
+                tableBody.append("<tr> <th scope=\"row\">" + element.id + "</th> <td>" + element.username + "</td> <td>" + strDate + "</td> <td>" + element.amount +  " €</td> <td>" + editIcon + deleteIcon + "</td> </tr>");
             });
 
             $("#donaciones-table .glyphicon-pencil").click(function(event) {
@@ -196,6 +206,21 @@ $(window).load(function() {
         }
     });
 
-    updateUsersTable();
-    updateDonationsTable();
+    var newToken = $.urlParam("token");
+    var error = $.urlParam("error");
+
+    if (error) {
+        showAlert(error, "danger");
+    } else {
+
+        if (newToken) {
+            Cookies.set("token", newToken);
+        }
+
+        callAPI("authCurrentUserGet", {}, {}, function(data) {
+            updateUsersTable();
+            updateDonationsTable();
+        });
+    }
+
 });

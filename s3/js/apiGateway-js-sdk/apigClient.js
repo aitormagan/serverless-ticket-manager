@@ -56,6 +56,7 @@ apigClientFactory.newClient = function (config) {
     var invokeUrl = 'https://XXX.execute-api.eu-central-1.amazonaws.com/YYY';
     var endpoint = /(^https?:\/\/[^\/]+)/g.exec(invokeUrl)[1];
     var pathComponent = invokeUrl.substring(endpoint.length);
+    apigClient.url = invokeUrl;
 
     var sigV4ClientConfig = {
         accessKey: config.accessKey,
@@ -81,6 +82,96 @@ apigClientFactory.newClient = function (config) {
 
     var apiGatewayClient = apiGateway.core.apiGatewayClientFactory.newClient(simpleHttpClientConfig, sigV4ClientConfig);
     
+    
+    
+    apigClient.authOptions = function (params, body, additionalParams) {
+        if(additionalParams === undefined) { additionalParams = {}; }
+        
+        apiGateway.core.utils.assertParametersDefined(params, [], ['body']);
+        
+        var authOptionsRequest = {
+            verb: 'options'.toUpperCase(),
+            path: pathComponent + uritemplate('/auth').expand(apiGateway.core.utils.parseParametersToObject(params, [])),
+            headers: apiGateway.core.utils.parseParametersToObject(params, []),
+            queryParams: apiGateway.core.utils.parseParametersToObject(params, []),
+            body: body
+        };
+        
+        
+        return apiGatewayClient.makeRequest(authOptionsRequest, authType, additionalParams, config.apiKey);
+    };
+    
+    
+    apigClient.authCallbackGet = function (params, body, additionalParams) {
+        if(additionalParams === undefined) { additionalParams = {}; }
+        
+        apiGateway.core.utils.assertParametersDefined(params, [], ['body']);
+        
+        var authCallbackGetRequest = {
+            verb: 'get'.toUpperCase(),
+            path: pathComponent + uritemplate('/auth/callback').expand(apiGateway.core.utils.parseParametersToObject(params, [])),
+            headers: apiGateway.core.utils.parseParametersToObject(params, []),
+            queryParams: apiGateway.core.utils.parseParametersToObject(params, []),
+            body: body
+        };
+        
+        
+        return apiGatewayClient.makeRequest(authCallbackGetRequest, authType, additionalParams, config.apiKey);
+    };
+    
+    
+    apigClient.authCurrentUserGet = function (params, body, additionalParams) {
+        if(additionalParams === undefined) { additionalParams = {}; }
+        
+        apiGateway.core.utils.assertParametersDefined(params, [], ['body']);
+        
+        var authCurrentUserGetRequest = {
+            verb: 'get'.toUpperCase(),
+            path: pathComponent + uritemplate('/auth/current-user').expand(apiGateway.core.utils.parseParametersToObject(params, [])),
+            headers: apiGateway.core.utils.parseParametersToObject(params, []),
+            queryParams: apiGateway.core.utils.parseParametersToObject(params, []),
+            body: body
+        };
+        
+        
+        return apiGatewayClient.makeRequest(authCurrentUserGetRequest, authType, additionalParams, config.apiKey);
+    };
+    
+    
+    apigClient.authCurrentUserOptions = function (params, body, additionalParams) {
+        if(additionalParams === undefined) { additionalParams = {}; }
+        
+        apiGateway.core.utils.assertParametersDefined(params, [], ['body']);
+        
+        var authCurrentUserOptionsRequest = {
+            verb: 'options'.toUpperCase(),
+            path: pathComponent + uritemplate('/auth/current-user').expand(apiGateway.core.utils.parseParametersToObject(params, [])),
+            headers: apiGateway.core.utils.parseParametersToObject(params, []),
+            queryParams: apiGateway.core.utils.parseParametersToObject(params, []),
+            body: body
+        };
+        
+        
+        return apiGatewayClient.makeRequest(authCurrentUserOptionsRequest, authType, additionalParams, config.apiKey);
+    };
+    
+    
+    apigClient.authLoginGet = function (params, body, additionalParams) {
+        if(additionalParams === undefined) { additionalParams = {}; }
+        
+        apiGateway.core.utils.assertParametersDefined(params, [], ['body']);
+        
+        var authLoginGetRequest = {
+            verb: 'get'.toUpperCase(),
+            path: pathComponent + uritemplate('/auth/login').expand(apiGateway.core.utils.parseParametersToObject(params, [])),
+            headers: apiGateway.core.utils.parseParametersToObject(params, []),
+            queryParams: apiGateway.core.utils.parseParametersToObject(params, []),
+            body: body
+        };
+        
+        
+        return apiGatewayClient.makeRequest(authLoginGetRequest, authType, additionalParams, config.apiKey);
+    };
     
     
     apigClient.donationGet = function (params, body, additionalParams) {

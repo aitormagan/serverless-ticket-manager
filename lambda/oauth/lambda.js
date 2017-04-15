@@ -120,15 +120,19 @@ var handleCallback = function handleCallback(event, callback) {
 
                         var token = uuid.v4();
 
+                        var item = {
+                            token: token,
+                            email: email,
+                            name: name,
+                            picture: picture,
+                            ttl: ttl
+                        };
+
+                        Object.keys(item).forEach((key) => (item[key] === "") && delete item[key]);
+
                         var paramsInsertUser = {
                             "TableName": "UserTokens",
-                            "Item": {
-                                token: token,
-                                email: email,
-                                name: name,
-                                picture: picture,
-                                ttl: ttl
-                            }
+                            "Item": item
                         };
 
                         docClient.put(paramsInsertUser, function(err, data) {

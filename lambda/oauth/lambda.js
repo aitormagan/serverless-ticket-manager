@@ -11,12 +11,16 @@ const S3_WEBSITE_URL = "http://BUCKET_ID.s3-website.eu-central-1.amazonaws.com/"
 const PROPERTIES_TABLE = "Properties";
 const USER_TOKENS_TABLE = "UserTokens";
 
+const AUTH_USERS_HASH_KEY = "authUsers"
+
 const INVALID_OAUTH2_RESPONSE_ERROR = "INVALID_OAUTH2_RESPONSE";
 const PERMISSION_DENIED_ERROR = "PERMISSION_DENIED";
 const INVALID_BACKEND_RESPONSE_ERROR = "INVALID_BACKEND_RESPONSE";
 const NOT_AUTHORIZED_EMAIL_ERROR = "NOT_AUTHORIZED_EMAIL";
 const AUTHORIZATION_NOT_INCLUDED_ERROR = "AHTORIZATION_NOT_INCLUDED";
 const INVALID_AUTHORIZATION_ERROR = "INVALID_AUTHORIZATION";
+const MISSING_MAIL_ERROR = "MISSING_MAIL";
+const EMAIL_ALREADY_REGISTERED_ERROR = "EMAIL_ALREADY_REGISTERED";
 
 var AWS = require('aws-sdk');
 var docClient = new AWS.DynamoDB.DocumentClient();
@@ -29,6 +33,10 @@ var generateResponse = function generateResponse(callback, statusCode, body, hea
         body: JSON.stringify(body) || null,
         headers: finalHeaders
     });
+};
+
+var generateErrorResponse = function generateErrorResponse(callback, statusCode, errorMessage, errorCode, headers) {
+    generateResponse(callback, statusCode, {"message": errorMessage, "code": errorCode}, headers);
 };
 
 // INIT LOGIN
@@ -112,7 +120,7 @@ var handleCallback = function handleCallback(event, callback) {
                 var paramsGetAuthUsers = {
                     "TableName": PROPERTIES_TABLE,
                     "Key": {
-                        "key": "authUsers"
+                        "key": AUTH_USERS_HASH_KEY
                     }
                 };
 
@@ -184,12 +192,55 @@ var currentUser = function currentUser(event, callback) {
     docClient.get(params, function(err, data) {
         if (err) {
             console.log("[ERROR][CHECK LOGGED] Error Accessing DynamoDB:", JSON.stringify(err));
-            generateResponse(callback, 500, {"message": "Invalid response from the backend", "code": INVALID_BACKEND_RESPONSE_ERROR});
+            generateErrorResponse(callback, 500, "Invalid response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
             callback("Error: Invalid Response from the backend");
         } else if (data.Item) {
             generateResponse(callback, 200, data.Item);
         } else {
-            generateResponse(callback, 401, {"message": "Provided token is unknown", "code": INVALID_AUTHORIZATION_ERROR});
+            generateErrorResponse(callback, 401, "Provided token is unknown", INVALID_AUTHORIZATION_ERROR);
+        }
+    });
+};
+
+// AUTHORIZE
+
+var authorizeUser = function authorizeUser(event, callback) {
+
+    var parsedJson = JSON.parse(event.body);
+
+    if (parsedJson === null || !("email" in parsedJson) || parsedJson["email"] === "") {
+        generateErrorResponse(callback, 400, "'email' is missing", MISSING_MAIL_ERROR);
+        return;
+    }
+
+    var email = parsedJson["email"].trim();
+
+    var paramsAuthorizeNewUser = {
+        "TableName": PROPERTIES_TABLE,
+        "Key": {
+            "key": AUTH_USERS_HASH_KEY
+        },
+        "UpdateExpression": "set val = list_append(val, :email)",
+        "ConditionExpression": "not contains (val, :emailStr)",
+        "ExpressionAttributeValues" : {
+            ":email" : [email],
+            ":emailStr": email
+        },
+        "ReturnValues": "UPDATED_NEW"
+    };
+
+    docClient.update(paramsAuthorizeNewUser, function(err, data) {
+        if (err) {
+            if (err.code === "ConditionalCheckFailedException") {
+                console.log("[WARN][AUTHORIZE USER] Authroize New User: Email " + email + " already registered");
+                generateErrorResponse(callback, 409, "Email " + email + " already registered", EMAIL_ALREADY_REGISTERED_ERROR);
+            } else {
+                console.log("[ERROR][AUTHORIZE USER] Authroize New User:", JSON.stringify(err));
+                generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
+            }
+        } else {
+            console.log("[INFO][AUTHORIZE USER] Authorize New User: ", JSON.stringify(data.Attributes.val));
+            generateResponse(callback, 200, data.Attributes.val);
         }
     });
 };
@@ -204,10 +255,13 @@ exports.handler = (event, context, callback) => {
             "GET": login
         },
         "/auth/callback": {
-            "GET": handleCallback,
+            "GET": handleCallback
         },
         "/auth/current-user": {
             "GET": currentUser
+        },
+        "/auth/authorize": {
+            "POST": authorizeUser
         }
     };
 

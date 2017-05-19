@@ -56,6 +56,34 @@
       </div>
     </div>
 
+    <div id="authorize-user-modal" class="modal fade">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h3 class="modal-title">Añadir usuario</h3>
+          </div>
+          <div class="modal-body">
+            <p>
+              Estas a punto de autorizar a un nuevo usario para controlar los abonados. Por favor, se cuidadoso, ya que cualquier persona con acceso a dicha cuenta de correo será capaz de ver todos los datos de los abonados.
+            </p>
+            <div class="form-horizontal" role="form">
+              <div class="form-group">
+                <label for="authorized-email-input" class="col-sm-2 control-label">Email</label>
+                <div class="col-sm-10">
+                  <input class="form-control" id="authorized-email-input" placeholder="example@gmail.com" type="email">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="authorize-form-button" class="btn btn-primary" data-dismiss="modal">Aceptar</button>
+            <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="delete-modal" class="modal fade">
       <div class="modal-dialog">
         <div class="modal-content">
@@ -92,6 +120,9 @@
           <ul class="nav navbar-nav">
             <li class="active"><a href="#abonos" data-toggle="tab">Abonos</a></li>
             <li><a href="#donaciones" data-toggle="tab">Donaciones</a></li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="#" id="current-user"></a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>

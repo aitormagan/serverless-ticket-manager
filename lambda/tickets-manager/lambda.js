@@ -43,16 +43,22 @@ var createItem = function createItem(nextItemIdKey, tablenName, item, event, cal
         "TableName": PROPERTIES_TABLE,
         "Key": {
             "key": nextItemIdKey
-        }
+        },
+        "UpdateExpression": "set val = val + :val",
+        "ExpressionAttributeValues": {
+            ":val": 1
+        },
+        "ReturnValues": "UPDATED_OLD"
+
     };
 
-    docClient.get(params, function(err, data) {
+    docClient.update(params, function(err, data) {
 
         if (err) {
-            console.log("[ERROR][CREATE ITEM] Get Current ItemId:", JSON.stringify(err));
+            console.log("[ERROR][CREATE ITEM] Update Current ItemId:", JSON.stringify(err));
             generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
         } else {
-            var itemId = data.Item.val;
+            var itemId = data.Attributes.val;
             var itemCopy = JSON.parse(JSON.stringify(item));
             itemCopy.id = itemId;
 
@@ -66,30 +72,10 @@ var createItem = function createItem(nextItemIdKey, tablenName, item, event, cal
                     console.log("[ERROR][CREATE ITEM] Insert User:", JSON.stringify(err));
                     generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
                 } else {
-                    var paramsUpdateNextItemId = {
-                        "TableName": PROPERTIES_TABLE,
-                        "Key": {
-                            "key": nextItemIdKey
-                        },
-                        "UpdateExpression": "set val = val + :val",
-                        "ExpressionAttributeValues": {
-                            ":val": 1
-                        },
-                        "ReturnValues": "UPDATED_NEW"
-                    };
-
-                    docClient.update(paramsUpdateNextItemId, function(err, data) {
-                        if (err) {
-                            console.log("[ERROR][CREATE ITEM] Update Next Item ID:", JSON.stringify(err));
-                            generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
-                        } else {
-                            console.log("[INFO][CREATE ITEM] New Item Inserted: ", JSON.stringify(paramsInsertUser.Item));
-                            generateResponse(callback, 201, paramsInsertUser.Item, {"Location": event.path + "/" + itemId});
-                        }
-                    });
+                    console.log("[INFO][CREATE ITEM] New Item Inserted: ", JSON.stringify(paramsInsertUser.Item));
+                    generateResponse(callback, 201, paramsInsertUser.Item, {"Location": event.path + "/" + itemId});
                 }
             });
-
         }
     });
 };

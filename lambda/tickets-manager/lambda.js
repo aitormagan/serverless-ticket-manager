@@ -130,12 +130,14 @@ var getAllItems = function getAllItems(tableName, event, callback) {
         "TableName": tableName,
     };
 
+    var multiplier = event["queryStringParameters"] !== null && "order" in event["queryStringParameters"] && event["queryStringParameters"]["order"] === 'desc' ? -1 : 1;
+
     docClient.scan(paramsScan, function(err, data) {
         if (err) {
             console.log("[ERROR][GET ALL ITEMS] Get All Items:", JSON.stringify(err));
             generateErrorResponse(callback, 500, "Invalid Response from the backend", INVALID_BACKEND_RESPONSE_ERROR);
         } else {
-            generateResponse(callback, 200, data.Items.sort((a,b) => a.id - b.id));
+            generateResponse(callback, 200, data.Items.sort((a,b) => multiplier * (a.id - b.id)));
         }
     });
 };

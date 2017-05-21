@@ -21,6 +21,46 @@ $(window).load(function() {
         "EMAIL_ALREADY_REGISTERED": "El email indicado ya está autorizado."
     }
 
+    const DATA_TABLES_SPANISH = {
+        "sProcessing":     "Procesando...",
+        "sLengthMenu":     "Mostrar _MENU_ registros",
+        "sZeroRecords":    "No se encontraron resultados",
+        "sEmptyTable":     "Ningún dato disponible en esta tabla",
+        "sInfo":           "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+        "sInfoEmpty":      "Mostrando registros del 0 al 0 de un total de 0 registros",
+        "sInfoFiltered":   "(filtrado de un total de _MAX_ registros)",
+        "sInfoPostFix":    "",
+        "sSearch":         "Buscar:",
+        "sUrl":            "",
+        "sInfoThousands":  ",",
+        "sLoadingRecords": "Cargando...",
+        "oPaginate": {
+            "sFirst":    "Primero",
+            "sLast":     "Último",
+            "sNext":     "Siguiente",
+            "sPrevious": "Anterior"
+        },
+        "oAria": {
+            "sSortAscending":  ": Activar para ordenar la columna de manera ascendente",
+            "sSortDescending": ": Activar para ordenar la columna de manera descendente"
+        }
+    }
+
+    var abonadosTable = $('#abonados-table').DataTable({
+        "ordering": false,
+        "pageLength": 25,
+        "language": DATA_TABLES_SPANISH,
+        "autoWidth": false
+    });
+
+    var donationsTable = $('#donaciones-table').DataTable({
+        "ordering": false,
+        "pageLength": 25,
+        "language": DATA_TABLES_SPANISH,
+        "autoWidth": false
+    });
+
+
     var getActionIcon = function getActionIcon(action, id) {
         return "<span class=\"glyphicon glyphicon-" + action + "\" style=\"cursor: pointer; color: #777777;\" data-id=" + id + "></span>"
     };
@@ -129,9 +169,11 @@ $(window).load(function() {
     };
 
     var updateUsersTable = function updateUsersTable() {
-        callAPI("userGet", null, null, function(res) {
-            var tableBody = $("#abonados-table > tbody");
-            tableBody.empty();
+        callAPI("userGet", {"order": "desc"}, null, function(res) {
+            //var tableBody = $("#abonados-table > tbody");
+            //tableBody.empty();
+
+            abonadosTable.clear();
 
             currentUsers = {};
             res.data.forEach(function(element) {
@@ -140,8 +182,10 @@ $(window).load(function() {
                 var strDate = date.toLocaleDateString("es-es") + " " + date.toLocaleTimeString();
                 var editIcon = getActionIcon("pencil", element.id);
                 var deleteIcon = getActionIcon("remove", element.id);
-                tableBody.append("<tr> <th scope=\"row\">" + element.id + "</th> <td>" + element.username + "</td> <td>" + strDate + "</td> <td>" + editIcon + deleteIcon + "</td> </tr>");
+                abonadosTable.row.add([element.id, element.username, strDate, editIcon + deleteIcon]);
             });
+
+            abonadosTable.draw();
 
             $("#abonados-table .glyphicon-pencil").click(function(event) {
                 var id = $(event.target).data("id");
@@ -160,15 +204,14 @@ $(window).load(function() {
             });
 
             $("#users-total-amount").text((res.data.length * USER_TICKET_COST).toFixed(2));
-
         });
     };
 
 
     var updateDonationsTable = function updateUsersTable() {
-        callAPI("donationGet", null, null, function(res) {
-            var tableBody = $("#donaciones-table > tbody");
-            tableBody.empty();
+        callAPI("donationGet", {"order": "desc"}, null, function(res) {
+            
+            donationsTable.clear()
 
             var totalAmount = 0;
             currentDonations = {};
@@ -179,8 +222,10 @@ $(window).load(function() {
                 var strDate = date.toLocaleDateString("es-es") + " " + date.toLocaleTimeString();
                 var editIcon = getActionIcon("pencil", element.id);
                 var deleteIcon = getActionIcon("remove", element.id);
-                tableBody.append("<tr> <th scope=\"row\">" + element.id + "</th> <td>" + element.username + "</td> <td>" + strDate + "</td> <td>" + element.amount +  " €</td> <td>" + editIcon + deleteIcon + "</td> </tr>");
+                donationsTable.row.add([element.id, element.username, strDate, element.amount + " €", editIcon + deleteIcon]);
             });
+
+            donationsTable.draw();
 
             $("#donaciones-table .glyphicon-pencil").click(function(event) {
                 var id = $(event.target).data("id");
@@ -247,6 +292,7 @@ $(window).load(function() {
         authorizeUser(email);
     });
 
+
     var newToken = $.urlParam("token");
     var error = $.urlParam("error");
     window.history.pushState("", "", '/');
@@ -262,7 +308,7 @@ $(window).load(function() {
         }
 
         callAPI("authCurrentUserGet", {}, {}, function(data) {
-            $("#current-user").text(data.data.name);
+            $("#current-user").text(data.data.name || data.data.email);
             updateUsersTable();
             updateDonationsTable();
         });

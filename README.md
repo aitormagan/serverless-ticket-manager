@@ -11,10 +11,15 @@ A sample Ticket Manager built using the Serverless capabilities offered by AWS (
 ### Table "Properties":
 * HashKey: key - String
 
-Items: {key: "nextUserId", "val": 1}, {key: "nextDonationId", "val": 1}
+Items: {key: "nextUserId", "val": 1}, {key: "nextDonationId", "val": 1}, {key: "authUsers", "val": [LIST OF EMAILS]}
 
 ### Table "RegisteredUsers": 
 * Hashkey: id - Number
 
 ### Table "RegisteredDonations": 
 * Hashkey: id - Number
+
+### Table "UserTokens":
+* Hashkey: token - String
+
+TTL enabled for the `ttl` attribute.

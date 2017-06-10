@@ -1,0 +1,20 @@
+{
+  "name": "auth-lambda-serverless-tickets-manager",
+  "version": "1.0.0",
+  "description": "",
+  "author": {
+    "name": "Aitor Magán",
+    "email": "aitor.magan@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/aitormagan/serverless-ticket-manager"
+  },
+  "dependencies": {
+    "request": "^2.81.0",
+    "uuid": "^3.0.1"
+  },
+  "engines": {
+    "node": ">= 0.4.0"
+  }
+}

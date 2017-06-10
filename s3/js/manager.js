@@ -3,11 +3,72 @@ $(window).load(function() {
     var apigClient = apigClientFactory.newClient();
     var currentUsers = {};
     var currentDonations = {};
-    const USER_TICKET_COST = 33;
+    const USER_TICKET_COST = 40;
+
+    const ERROR_TRANSLATIONS = {
+        "INVALID_OAUTH2_RESPONSE": "Respuesta Inválida del proveedor OAuth2. Reintentalo de nuevo más tarde.",
+        "PERMISSION_DENIED": "No se ha autorizado a la aplicación a acceder a tu información en el proveedor OAuth2. Vuelve a intentarlo y pulsa el botón \"Permitir\".",
+        "INVALID_BACKEND_RESPONSE": "Error al acceder al servicio. Inténtalo de nuevo pasados unos segundos.",
+        "NOT_AUTHORIZED_EMAIL": "Tu dirección de correo electrónico no tiene acceso a este servicio.", 
+        "AHTORIZATION_NOT_INCLUDED": "La cabecera \"Authorization\" no está incluída.",
+        "INVALID_AUTHORIZATION": "El token de autorización incluído en la petición no es válido.",
+        "MISSING_USER_NAME": "No se ha incluído el nombre en la petición. Vuelve a realizar la operación incluyendo el nombre.",
+        "MISSING_USER_NAME_OR_AMOUNT": "No se ha incluído el nombre o la cantidad donada en la petición. Vuelve a realizar la operación incluyendo el nombre y la cantidad donada.",
+        "INVALID_AMOUNT": "El valor de la cantidad donada sólo puede ser un número. Vuelve a realizar la operación especificando un número válido",
+        "INVALID_ID_FORMAT": "El formato del ID de recurso es inválido.",
+        "NON_EXISTING_ID": "El ID de recurso indicado no existe.",
+        "MISSING_MAIL_": "No se ha incluído el email a ser autorizado.",
+        "EMAIL_ALREADY_REGISTERED": "El email indicado ya está autorizado."
+    }
+
+    const DATA_TABLES_SPANISH = {
+        "sProcessing":     "Procesando...",
+        "sLengthMenu":     "Mostrar _MENU_ registros",
+        "sZeroRecords":    "No se encontraron resultados",
+        "sEmptyTable":     "Ningún dato disponible en esta tabla",
+        "sInfo":           "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+        "sInfoEmpty":      "Mostrando registros del 0 al 0 de un total de 0 registros",
+        "sInfoFiltered":   "(filtrado de un total de _MAX_ registros)",
+        "sInfoPostFix":    "",
+        "sSearch":         "Buscar:",
+        "sUrl":            "",
+        "sInfoThousands":  ",",
+        "sLoadingRecords": "Cargando...",
+        "oPaginate": {
+            "sFirst":    "Primero",
+            "sLast":     "Último",
+            "sNext":     "Siguiente",
+            "sPrevious": "Anterior"
+        },
+        "oAria": {
+            "sSortAscending":  ": Activar para ordenar la columna de manera ascendente",
+            "sSortDescending": ": Activar para ordenar la columna de manera descendente"
+        }
+    }
+
+    var abonadosTable = $('#abonados-table').DataTable({
+        "ordering": false,
+        "pageLength": 25,
+        "language": DATA_TABLES_SPANISH,
+        "autoWidth": false
+    });
+
+    var donationsTable = $('#donaciones-table').DataTable({
+        "ordering": false,
+        "pageLength": 25,
+        "language": DATA_TABLES_SPANISH,
+        "autoWidth": false
+    });
+
 
     var getActionIcon = function getActionIcon(action, id) {
         return "<span class=\"glyphicon glyphicon-" + action + "\" style=\"cursor: pointer; color: #777777;\" data-id=" + id + "></span>"
     };
+
+    $.urlParam = function(name){
+        var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+        return results === null ? null : decodeURIComponent(results[1]) || 0;
+    }
 
     var showAlert = function showAlert(text, type) {
         type = type || "success";
@@ -19,14 +80,29 @@ $(window).load(function() {
         );
     };
 
+    var showError = function showError(errorCode, updateText) {
+        var errorText = errorCode in ERROR_TRANSLATIONS ? ERROR_TRANSLATIONS[errorCode] : errorCode;
+
+        if (updateText) {
+            errorText += " <a href=\"/\">Actualizar</a>";
+        }
+
+        showAlert(errorText, "danger");
+    }
+
     var callAPI = function callAPI(apiAction, params, body, then) {
+        var additionalParams = { headers: { Authorization: Cookies.get("token") } };
         $("#loading-alert").removeClass("hidden");
-        apigClient[apiAction](params, body).then(function(result) {
+        apigClient[apiAction](params, body, additionalParams).then(function(result) {
             $("#loading-alert").addClass("hidden");
             then(result);
         }).catch(function(result) {
+            if (result.status === 401 || result.status === 0) {
+                $(location).attr("href", apigClient.url + "/auth/login");
+                return;
+            }
             $("#loading-alert").addClass("hidden");
-            showAlert("Error al acceder al servicio. Inténtalo de nuevo pasados unos segundos.", "danger");
+            showError(result.data.code);
         });
     };
 
@@ -73,6 +149,12 @@ $(window).load(function() {
         });
     };
 
+    var authorizeUser = function authorizeuser(email) {
+        callAPI("authAuthorizePost", {}, {"email": email}, function(result) {
+            showAlert("Email <strong>" + email + "</strong> autorizado correctamente.");
+        });
+    }
+
     var initUserForm = function initUserForm(id, username) {
         $("#userid-input").val(id);
         $("#username-input").val(username);
@@ -87,9 +169,11 @@ $(window).load(function() {
     };
 
     var updateUsersTable = function updateUsersTable() {
-        callAPI("userGet", null, null, function(res) {
-            var tableBody = $("#abonados-table > tbody");
-            tableBody.empty();
+        callAPI("userGet", {"order": "desc"}, null, function(res) {
+            //var tableBody = $("#abonados-table > tbody");
+            //tableBody.empty();
+
+            abonadosTable.clear();
 
             currentUsers = {};
             res.data.forEach(function(element) {
@@ -98,8 +182,10 @@ $(window).load(function() {
                 var strDate = date.toLocaleDateString("es-es") + " " + date.toLocaleTimeString();
                 var editIcon = getActionIcon("pencil", element.id);
                 var deleteIcon = getActionIcon("remove", element.id);
-                tableBody.append("<tr> <th scope=\"row\">" + element.id + "</th> <td>" + element.username + "</td> <td>" + strDate + "</td> <td>" + editIcon + deleteIcon + "</td> </tr>");
+                abonadosTable.row.add([element.id, element.username, strDate, editIcon + deleteIcon]);
             });
+
+            abonadosTable.draw();
 
             $("#abonados-table .glyphicon-pencil").click(function(event) {
                 var id = $(event.target).data("id");
@@ -118,15 +204,14 @@ $(window).load(function() {
             });
 
             $("#users-total-amount").text((res.data.length * USER_TICKET_COST).toFixed(2));
-
         });
     };
 
 
     var updateDonationsTable = function updateUsersTable() {
-        callAPI("donationGet", null, null, function(res) {
-            var tableBody = $("#donaciones-table > tbody");
-            tableBody.empty();
+        callAPI("donationGet", {"order": "desc"}, null, function(res) {
+            
+            donationsTable.clear()
 
             var totalAmount = 0;
             currentDonations = {};
@@ -137,8 +222,10 @@ $(window).load(function() {
                 var strDate = date.toLocaleDateString("es-es") + " " + date.toLocaleTimeString();
                 var editIcon = getActionIcon("pencil", element.id);
                 var deleteIcon = getActionIcon("remove", element.id);
-                tableBody.append("<tr> <th scope=\"row\">" + element.id + "</th> <td>" + element.username + "</td> <td>" + strDate + "</td> <td>" + element.amount +  "</td> <td>" + editIcon + deleteIcon + "</td> </tr>");
+                donationsTable.row.add([element.id, element.username, strDate, element.amount + " €", editIcon + deleteIcon]);
             });
+
+            donationsTable.draw();
 
             $("#donaciones-table .glyphicon-pencil").click(function(event) {
                 var id = $(event.target).data("id");
@@ -171,6 +258,10 @@ $(window).load(function() {
         $("#abonado-modal").modal("show");
     });
 
+    $("#current-user").click(function() {
+        $("#authorized-email-input").val("");
+        $("#authorize-user-modal").modal("show");
+    });
 
     $("#update-abonos-list").click(updateUsersTable);
     $("#update-donaciones-list").click(updateDonationsTable);
@@ -196,6 +287,31 @@ $(window).load(function() {
         }
     });
 
-    updateUsersTable();
-    updateDonationsTable();
+    $("#authorize-form-button").click(function() {
+        var email = $("#authorized-email-input").val().trim();
+        authorizeUser(email);
+    });
+
+
+    var newToken = $.urlParam("token");
+    var error = $.urlParam("error");
+    window.history.pushState("", "", '/');
+
+    if (error) {
+        showError(error, true);
+        $('#abonos').addClass('hidden');
+        $('#donaciones').addClass('hidden')
+    } else {
+
+        if (newToken) {
+            Cookies.set("token", newToken);
+        }
+
+        callAPI("authCurrentUserGet", {}, {}, function(data) {
+            $("#current-user").text(data.data.name || data.data.email);
+            updateUsersTable();
+            updateDonationsTable();
+        });
+    }
+
 });

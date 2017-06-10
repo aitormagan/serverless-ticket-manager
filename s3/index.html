@@ -12,13 +12,14 @@
 
     <!-- Bootstrap core CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.15/css/dataTables.bootstrap.min.css">
     <link rel="stylesheet" href="css/main.css">
 
   </head>
 
   <body>
 
-    <div class="overlay" id="loading-alert">
+    <div class="overlay hidden" id="loading-alert">
       <div class="loader"></div>
     </div>
 
@@ -43,13 +44,41 @@
               <div class="form-group">
                 <label for="amount-input" class="col-sm-2 control-label">Cantidad</label>
                 <div class="col-sm-10">
-                  <input class="form-control" id="amount-input" placeholder="Cantidad (en €uros)">
+                  <input class="form-control" id="amount-input" placeholder="Cantidad (en €uros)" type="number">
                 </div>
               </div>
             </div>
           </div>
           <div class="modal-footer">
             <button id="edit-form-accept-button" class="btn btn-primary" data-dismiss="modal">Aceptar</button>
+            <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="authorize-user-modal" class="modal fade">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h3 class="modal-title">Añadir usuario</h3>
+          </div>
+          <div class="modal-body">
+            <p>
+              Estas a punto de autorizar a un nuevo usario para controlar los abonados. Por favor, se cuidadoso, ya que cualquier persona con acceso a dicha cuenta de correo será capaz de ver todos los datos de los abonados.
+            </p>
+            <div class="form-horizontal" role="form">
+              <div class="form-group">
+                <label for="authorized-email-input" class="col-sm-2 control-label">Email</label>
+                <div class="col-sm-10">
+                  <input class="form-control" id="authorized-email-input" placeholder="example@gmail.com" type="email">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="authorize-form-button" class="btn btn-primary" data-dismiss="modal">Aceptar</button>
             <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Cancelar</button>
           </div>
         </div>
@@ -92,6 +121,9 @@
           <ul class="nav navbar-nav">
             <li class="active"><a href="#abonos" data-toggle="tab">Abonos</a></li>
             <li><a href="#donaciones" data-toggle="tab">Donaciones</a></li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="#" id="current-user"></a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
@@ -150,6 +182,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/2.1.4/js.cookie.min.js" crossorigin="anonymous"></script>    
     <script type="text/javascript" src="js/apiGateway-js-sdk/lib/axios/dist/axios.standalone.js"></script>
     <script type="text/javascript" src="js/apiGateway-js-sdk/lib/CryptoJS/rollups/hmac-sha256.js"></script>
     <script type="text/javascript" src="js/apiGateway-js-sdk/lib/CryptoJS/rollups/sha256.js"></script>
@@ -162,6 +195,8 @@
     <script type="text/javascript" src="js/apiGateway-js-sdk/lib/apiGatewayCore/utils.js"></script>
     <script type="text/javascript" src="js/apiGateway-js-sdk/apigClient.js"></script>
     <script type="text/javascript" src="js/manager.js"></script>
-
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.15/js/jquery.dataTables.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.15/js/dataTables.bootstrap.min.js
+"></script>
   </body>
 </html>

@@ -3,7 +3,7 @@ $(window).load(function() {
     var apigClient = apigClientFactory.newClient();
     var currentUsers = {};
     var currentDonations = {};
-    const USER_TICKET_COST = 40;
+    const USER_TICKET_COST = 36;
 
     const ERROR_TRANSLATIONS = {
         "INVALID_OAUTH2_RESPONSE": "Respuesta Inválida del proveedor OAuth2. Reintentalo de nuevo más tarde.",

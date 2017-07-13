@@ -109,11 +109,10 @@ $(window).load(function() {
 
     var createUser = function createUser(username, callback) {
 
-        var defaultCallback = function(err, data) {
+        callback = callback || function(err, data) {
             showAlert("<strong>" + data.username + "</strong> creado con # <strong>" + data.id + "</strong>.");
-        }
-
-        callback = callback === undefined ? defaultCallback : callback;
+        };
+        
         callAPI("userPost", {}, {username: username}, function(result) {
             updateUsersTable();
             callback(null, result.data);

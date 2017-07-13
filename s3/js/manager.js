@@ -107,10 +107,16 @@ $(window).load(function() {
     };
 
 
-    var createUser = function createUser(username) {
+    var createUser = function createUser(username, callback) {
+
+        var defaultCallback = function(err, data) {
+            showAlert("<strong>" + data.username + "</strong> creado con # <strong>" + data.id + "</strong>.");
+        }
+
+        callback = callback === undefined ? defaultCallback : callback;
         callAPI("userPost", {}, {username: username}, function(result) {
-            showAlert("<strong>" + result.data.username + "</strong> creado con # <strong>" + result.data.id + "</strong>.");
             updateUsersTable();
+            callback(null, result.data);
         });
     }
 
@@ -248,6 +254,26 @@ $(window).load(function() {
         });
     };
 
+    var batchInfoIntroduced = function batchInfoIntroduced() {
+        var text = $('#usernames-input').val();
+        var payed = $("#payed-input").val();
+        var users = text.split('\n');
+        users = users.filter(function(item) {
+            return item !== "";
+        });
+        var total = users.length * USER_TICKET_COST;
+        $("#total-input").val(total.toFixed(2) + " €");
+        $("#change-input").val((payed - total).toFixed(2) + " €");
+    }
+
+    $("#new-abono-batch").click(function() {
+        $("#usernames-input").val("");
+        $("#total-input").val("");
+        $("#payed-input").val("");
+        $("#change-input").val("");
+        $("#abonado-modal-batch").modal("show");
+    });
+
     $("#new-abono").click(function() {
         initUserForm("", "");
         $("#abonado-modal").modal("show");
@@ -292,6 +318,26 @@ $(window).load(function() {
         authorizeUser(email);
     });
 
+    $("#batch-form-accept-button").click(function() {
+        var users = $('#usernames-input').val().split('\n').filter(function(user) {
+            return user !== "";
+        });
+
+        var functions = users.map(function(user) {
+            return createUser.bind(this, user);
+        });
+
+        async.series(functions, function(err, datas) {
+            var htmlList = "";
+            datas.forEach(function(data) {
+                htmlList += "<li><strong>#" + data.id + "</strong> - <strong>" + data.username + "</strong></li>";
+            });
+            showAlert("Usuarios creados correctamente: <ul>" + htmlList + "</ul>");
+        });
+    });
+
+    $('#usernames-input').bind('input propertychange', batchInfoIntroduced);
+    $('#payed-input').bind('input propertychange', batchInfoIntroduced);
 
     var newToken = $.urlParam("token");
     var error = $.urlParam("error");

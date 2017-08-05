@@ -192,22 +192,6 @@ $(window).load(function() {
 
             abonadosTable.draw();
 
-            $("#abonados-table .glyphicon-pencil").click(function(event) {
-                var id = $(event.target).data("id");
-                initUserForm(id, currentUsers[id].username);
-                $("#abonado-modal").modal("show");
-            });
-
-
-            $("#abonados-table .glyphicon-remove").click(function(event) {
-                var id = $(event.target).data("id");
-                $("#delete-item-text").empty()
-                $("#delete-item-text").append("al abonado <strong>" + currentUsers[id].username + "</strong>");
-                $("#delete-form-accept-button").unbind("click");
-                $("#delete-form-accept-button").click(deleteUser.bind(this, id));
-                $("#delete-modal").modal("show");
-            });
-
             $("#users-total-amount").text((res.data.length * USER_TICKET_COST).toFixed(2));
         });
     };
@@ -231,22 +215,6 @@ $(window).load(function() {
             });
 
             donationsTable.draw();
-
-            $("#donaciones-table .glyphicon-pencil").click(function(event) {
-                var id = $(event.target).data("id");
-                initDonationForm(id, currentDonations[id].username, currentDonations[id].amount);
-                $("#abonado-modal").modal("show");
-            });
-
-
-            $("#donaciones-table .glyphicon-remove").click(function(event) {
-                var id = $(event.target).data("id");
-                $("#delete-item-text").empty()
-                $("#delete-item-text").append("la donación de <strong>" + currentDonations[id].username + "</strong> por un valor de <strong>" + currentDonations[id].amount + " €");
-                $("#delete-form-accept-button").unbind("click");
-                $("#delete-form-accept-button").click(deleteDonation.bind(this, id));
-                $("#delete-modal").modal("show");
-            });
 
             $("#donations-total-amount").text(totalAmount.toFixed(2));
 
@@ -338,6 +306,43 @@ $(window).load(function() {
     $('#usernames-input').bind('input propertychange', batchInfoIntroduced);
     $('#payed-input').bind('input propertychange', batchInfoIntroduced);
 
+    abonadosTable.on('draw', function() {
+        $("#abonados-table .glyphicon-pencil").click(function(event) {
+            var id = $(event.target).data("id");
+            initUserForm(id, currentUsers[id].username);
+            $("#abonado-modal").modal("show");
+        });
+
+
+        $("#abonados-table .glyphicon-remove").click(function(event) {
+            var id = $(event.target).data("id");
+            $("#delete-item-text").empty()
+            $("#delete-item-text").append("al abonado <strong>" + currentUsers[id].username + "</strong>");
+            $("#delete-form-accept-button").unbind("click");
+            $("#delete-form-accept-button").click(deleteUser.bind(this, id));
+            $("#delete-modal").modal("show");
+        });
+    });
+
+    donationsTable.on('draw', function() {
+        $("#donaciones-table .glyphicon-pencil").click(function(event) {
+            var id = $(event.target).data("id");
+            initDonationForm(id, currentDonations[id].username, currentDonations[id].amount);
+            $("#abonado-modal").modal("show");
+        });
+
+
+        $("#donaciones-table .glyphicon-remove").click(function(event) {
+            var id = $(event.target).data("id");
+            $("#delete-item-text").empty()
+            $("#delete-item-text").append("la donación de <strong>" + currentDonations[id].username + "</strong> por un valor de <strong>" + currentDonations[id].amount + " €");
+            $("#delete-form-accept-button").unbind("click");
+            $("#delete-form-accept-button").click(deleteDonation.bind(this, id));
+            $("#delete-modal").modal("show");
+        });
+    });
+
+
     var newToken = $.urlParam("token");
     var error = $.urlParam("error");
     window.history.pushState("", "", '/');
@@ -349,7 +354,7 @@ $(window).load(function() {
     } else {
 
         if (newToken) {
-            Cookies.set("token", newToken);
+            Cookies.set("token", newToken, {expires: 1});
         }
 
         callAPI("authCurrentUserGet", {}, {}, function(data) {

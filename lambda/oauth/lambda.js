@@ -148,7 +148,7 @@ var handleCallback = function handleCallback(event, callback) {
                         Object.keys(item).forEach((key) => (item[key] === "") && delete item[key]);
 
                         var paramsInsertUser = {
-                            "TableName": "UserTokens",
+                            "TableName": USER_TOKENS_TABLE,
                             "Item": item
                         };
 
